@@ -6,3 +6,6 @@
 //let debug format = Printf.ksprintf _log.Debug format
 
 let debug = eprintfn "[DEBUG]: %s"  
+let error = eprintfn "[ERROR]: %s"  
+let warn = eprintfn "[WARN]: %s"  
+let info = eprintfn "[INFO]: %s"  

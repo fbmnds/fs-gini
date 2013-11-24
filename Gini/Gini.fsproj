@@ -69,6 +69,7 @@
     <Compile Include="Gini.fs" />
     <Compile Include="Log.fs" />
     <Compile Include="ExcelHOF.fs" />
+    <Compile Include="ExcelHOFTest.fs" />
     <Compile Include="GiniTest.fs" />
     <Compile Include="Program.fs" />
     <None Include="App.config" />

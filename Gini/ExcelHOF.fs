@@ -127,111 +127,6 @@ let filter (f : Range -> bool) (range : Range) =
     |> Seq.filter (fun cell -> f cell)
 
 
-let pushDataToExcel() = 
-    let excel = ApplicationClass(Visible = false)
-
-    // Open a workbook:
-    let workbookDir =  @"C:\Users\boe\Documents\Visual Studio 2013\Projects\Gini\Gini\data"
-    let workbooks = excel.Workbooks
-    let workbook = workbooks.Open(workbookDir + @"\GiniTest.xlsx")
-    let sheets = workbook.Worksheets
-
-    // Get a reference to the workbook:
-    let sheet = sheets.["GiniTest"] :?> Worksheet
-
-
-    // column A
-    sheet.Cells.[1,1] <- "y0"
-    for i in [2..1000] do
-        sheet.Cells.[i,1] <- 1
-
-    // column B
-    sheet.Cells.[1,2] <- "x"
-    for i in [2..1000] do
-        sheet.Cells.[i,2] <- i-1
-
-    // column C
-    sheet.Cells.[1,3] <- "y1"
-    for i in [2..1000] do
-        sheet.Cells.[i,3] <- ((float i)-1.0)**(1./3.)
-
-    // column D
-    sheet.Cells.[1,4] <- "y2"
-    for i in [2..1000] do
-        sheet.Cells.[i,4] <- sqrt ((float i)-1.0)
-
-    // column E
-    sheet.Cells.[1,5] <- "y3"
-    for i in [2..1000] do
-        sheet.Cells.[i,5] <- sqrt ((float i)-1.0)
-
-    // column F
-    sheet.Cells.[1,6] <- "y4"
-    for i in [2..1000] do
-        sheet.Cells.[i,6] <- (float i) * 0.1 * 1000.0
-
-    // column G
-    sheet.Cells.[1,7] <- "y5"
-    for i in [2..1000] do
-        sheet.Cells.[i,7] <- (float i) * 0.05 * 1000.0
-
-    // column H
-    sheet.Cells.[1,8] <- "y6"
-    for i in [2..1000] do
-        sheet.Cells.[i,8] <- (float i) ** 2.0
-
-    // column I
-    sheet.Cells.[1,9] <- "y7"
-    for i in [2..1000] do
-        sheet.Cells.[i,9] <- (float i) ** 3.0
-
-
-    // http://stackoverflow.com/questions/158706/how-to-properly-clean-up-excel-interop-objects
-    System.Runtime.InteropServices.Marshal.ReleaseComObject(sheet) |> ignore
-    System.Runtime.InteropServices.Marshal.ReleaseComObject(sheets) |> ignore
-    // http://stackoverflow.com/questions/19977337/closing-excel-application-with-excel-interop-without-save-message
-    // http://msdn.microsoft.com/en-us/library/h1e33e36.aspx
-    workbook.Save()
-    workbooks.Close()
-    System.Runtime.InteropServices.Marshal.ReleaseComObject(workbooks) |> ignore
-    excel.Quit()
-    System.Runtime.InteropServices.Marshal.ReleaseComObject(excel) |> ignore
-
-
-
-let pullDataFromExcel() : Frame<int,_> =
-
-    let excel = ApplicationClass(Visible = false)
-
-    // Open a workbook:
-    let workbookDir =  @"C:\Users\boe\Documents\Visual Studio 2013\Projects\Gini\Gini\data"
-    let workbooks = excel.Workbooks
-    let workbook = workbooks.Open(workbookDir + @"\GiniTest.xlsx")
-    let sheets = workbook.Worksheets
-
-    // Get a reference to the workbook:
-    let sheet = sheets.["GiniTest"] :?> Worksheet
-
-    let data = seq { 
-        for col in [1..9] do
-            let label = cellString (sheet.Cells.[1,col] :?> Range)
-            for row in [2..10] do
-                yield (row-1, label, cellDouble (sheet.Cells.[row,col] :?> Range))
-    } 
-
-    let frame = Frame.ofValues data
-
-    // http://stackoverflow.com/questions/158706/how-to-properly-clean-up-excel-interop-objects
-    System.Runtime.InteropServices.Marshal.ReleaseComObject(sheet) |> ignore
-    System.Runtime.InteropServices.Marshal.ReleaseComObject(sheets) |> ignore
-    // http://stackoverflow.com/questions/19977337/closing-excel-application-with-excel-interop-without-save-message
-    // http://msdn.microsoft.com/en-us/library/h1e33e36.aspx
-    workbook.Save()
-    workbooks.Close()
-    System.Runtime.InteropServices.Marshal.ReleaseComObject(workbooks) |> ignore
-    excel.Quit()
-    System.Runtime.InteropServices.Marshal.ReleaseComObject(excel) |> ignore
-    frame
 
 type _ExcelApplication = ApplicationClass option
 type _Workbooks = Workbooks option
@@ -246,7 +141,7 @@ let getExcel() =
     try 
         excel <- Some (ApplicationClass(Visible = false)) 
     with 
-        | _ -> Log.debug "Failed to start Excel application."
+        | _ -> Log.error "Failed to start Excel application."
     excel
 
 let getWorkbooks (excel: ApplicationClass) =
@@ -254,7 +149,7 @@ let getWorkbooks (excel: ApplicationClass) =
     try 
         workbooks <- Some excel.Workbooks
     with
-        | _ -> Log.debug "Failed to access Excel Workbooks."
+        | _ -> Log.error "Failed to access Excel Workbooks."
     workbooks
 
 let getWorkbook (workbooks: Workbooks) fname =
@@ -262,7 +157,7 @@ let getWorkbook (workbooks: Workbooks) fname =
     try
         workbook <- Some(workbooks.Open(fname))
     with
-        | _ -> Log.debug (sprintf "Failed to open Workbook %s." fname)  
+        | _ -> Log.error (sprintf "Failed to open Workbook %s." fname)  
     workbook
 
 let getWorkbook2 (workbooks: Workbooks) path fname =
@@ -290,7 +185,7 @@ let getFrameWithStringHeader (sheet: Worksheet)
     try
         frame <- Some (Frame.ofValues data)
     with
-        | _ -> Log.debug (sprintf "Failed to read Frame at [%A,%A] [%A,%A]" 
+        | _ -> Log.error (sprintf "Failed to read Frame at [%A,%A] [%A,%A]" 
             ulrow ulcol lrrow lrcol)
     frame
 
