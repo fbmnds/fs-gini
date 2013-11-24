@@ -24,10 +24,14 @@ let main argv =
     test_calcGini()
 
     printfn "\n-----"
-    printfn "test 'calcGini' on wikipedia examples"
-    test_calcGini_Wikipedia()
+    //printfn "test 'calcGini' on wikipedia examples"
+    //test_calcGini_Wikipedia()
 
-    test_ExcelSheetHandling()
+    //test_ExcelSheetHandling()
+
+    test_getRangeAsArray ()
+
+
 
     waitForKey()
     0 // Exitcode aus ganzen Zahlen zurückgeben

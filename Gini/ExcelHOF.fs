@@ -135,6 +135,7 @@ type _Sheets = Sheets option
 type _Worksheet = Worksheet option
 type _FrameIntString = Frame<int,string> option
 type _CellCoord = int * int
+type _Array = Array option
  
 let getExcel() = 
     let mutable excel = _ExcelApplication.None
@@ -188,6 +189,43 @@ let getFrameWithStringHeader (sheet: Worksheet)
         | _ -> Log.error (sprintf "Failed to read Frame at [%A,%A] [%A,%A]" 
             ulrow ulcol lrrow lrcol)
     frame
+
+// http://stackoverflow.com/questions/22708/how-do-i-find-the-excel-column-name-that-corresponds-to-a-given-integer
+//public static string Column(int column)
+//{
+//    column--;
+//    if (column >= 0 && column < 26)
+//        return ((char)('A' + column)).ToString();
+//    else if (column > 25)
+//        return Column(column / 26) + Column(column % 26 + 1);
+//    else
+//        throw new Exception("Invalid Column #" + (column + 1).ToString());
+//}
+let rec intToColumn i =
+    let mutable x = ""
+    let j = i-1
+    if (j >= 0 && j < 26) then
+        x <- (char (int 'A' + j)).ToString()
+    elif (j > 25 && j < 16384) then
+        x <- intToColumn (j/26) + intToColumn (j % 26 + 1)
+    else 
+        failwith (sprintf "Invalid Excel column index %A" i)
+    x
+
+let getRangeAsArray (sheet: Worksheet) ulrow ulcol lrrow lrcol : Array option =
+    let mutable r = None
+    try 
+        let s = (sprintf "%s%s:%s%s" (intToColumn ulcol) 
+                                     (sprintf "%d" ulrow)
+                                     (intToColumn lrcol) 
+                                     (sprintf "%d" lrrow))
+        Log.info (sprintf "%s" s)
+        r <- Some (sheet.Range s)
+    with
+        | _ -> Log.error (sprintf "Invalid Excel column indices %d %d %d %d." ulrow ulcol lrrow lrcol)
+    match r with 
+    | Some r -> Some (r.Value() :?> Array)
+    | _ -> None
 
 /// catch the exception, when the user opts for letting overwrite the previously opened Workbook
 let trySave (workbook: Workbook) =
@@ -251,5 +289,9 @@ type ExcelWorkbook(path: string option, fname: string) =
     member x.getFrameWithStringHeader (ul:_CellCoord) (lr: _CellCoord) = 
         match sheet with 
         | Some sheet -> getFrameWithStringHeader sheet ul lr
-        | _ -> _FrameIntString.None
+        | _ -> None
         
+    member x.getRangeAsArray ulrow ulcol lrrow lrcol : Array option =
+        match sheet with 
+        | Some sheet -> getRangeAsArray sheet ulrow ulcol lrrow lrcol
+        | _ -> None

@@ -168,6 +168,31 @@ let test_ExcelSheetHandling() =
     | Some dataFrame2 -> printfn "%s" (dataFrame2.Format())
     | _ -> ignore dataFrame2
 
+
     /// there is auto dispose with 'use', no need to exlicitely do either call: 
     /// (workbook :> System.IDisposable).Dispose()
     /// workbook.close()
+
+
+let test_getRangeAsArray () = 
+    printfn "\n-----"
+    printfn "\n workbook.getRangeAsArray 1 1 1000 9"
+    use workbook = new ExcelWorkbook (Some __SOURCE_DIRECTORY__, @"data\GiniTest.xlsx")
+    workbook.setSheetByName "GiniTest"
+    let x = workbook.getRangeAsArray 1 1 1000 9
+    printfn "%A" x
+
+
+
+let test_intToColumn() =
+    try 
+        printfn "Excel index 0 : %s" (ExcelHOF.intToColumn 0)
+    with
+        | _ -> printfn "exception caught"
+    printfn "Excel index 1 : %s" (ExcelHOF.intToColumn 1)
+    printfn "Excel index 53 : %s" (ExcelHOF.intToColumn 53)
+    printfn "Excel index 16384 : %s" (ExcelHOF.intToColumn 16384)
+    try 
+        printfn "Excel index 16385 : %s" (ExcelHOF.intToColumn 16385)
+    with
+        | _ -> printfn "exception caught"
