@@ -31,7 +31,7 @@ let main argv =
 
     test_getRangeAsArray ()
 
-
+    test_getFrameWithHeader()
 
     waitForKey()
     0 // Exitcode aus ganzen Zahlen zurückgeben

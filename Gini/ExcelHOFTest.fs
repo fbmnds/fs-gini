@@ -180,7 +180,22 @@ let test_getRangeAsArray () =
     use workbook = new ExcelWorkbook (Some __SOURCE_DIRECTORY__, @"data\GiniTest.xlsx")
     workbook.setSheetByName "GiniTest"
     let x = workbook.getRangeAsArray 1 1 1000 9
-    printfn "%A" x
+    match x with
+    | Some x -> printfn "(x.GetValue [|1;1|]) :  %A \t (x.GetValue [|1000;9|]) : %A" (x.GetValue [|1;1|]) (x.GetValue [|1000;9|])
+    | _ -> printfn "None."
+    
+
+
+let test_getFrameWithHeader () = 
+    printfn "\n-----"
+    printfn "\n workbook.getRangeAsArray 1 1 1000 9"
+    use workbook = new ExcelWorkbook (Some __SOURCE_DIRECTORY__, @"data\GiniTest.xlsx")
+    workbook.setSheetByName "GiniTest"
+    let df = workbook.getFrameWithHeader 1 1 1000 9
+    match df with
+    | Some df -> printfn "Data frame from Excel Range:\n%s" (df.Format())
+    | _ -> printfn "None."
+    
 
 
 

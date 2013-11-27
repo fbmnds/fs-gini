@@ -126,54 +126,50 @@ let filter (f : Range -> bool) (range : Range) =
     |> toSeq
     |> Seq.filter (fun cell -> f cell)
 
-
-
-type _ExcelApplication = ApplicationClass option
-type _Workbooks = Workbooks option
-type _Workbook = Workbook option
-type _Sheets = Sheets option
-type _Worksheet = Worksheet option
-type _FrameIntString = Frame<int,string> option
-type _CellCoord = int * int
-type _Array = Array option
  
 let getExcel() = 
-    let mutable excel = _ExcelApplication.None
+    let mutable excel = None
     try 
         excel <- Some (ApplicationClass(Visible = false)) 
     with 
         | _ -> Log.error "Failed to start Excel application."
     excel
 
+
 let getWorkbooks (excel: ApplicationClass) =
-    let mutable workbooks = _Workbooks.None
+    let mutable workbooks = None
     try 
         workbooks <- Some excel.Workbooks
     with
         | _ -> Log.error "Failed to access Excel Workbooks."
     workbooks
 
+
 let getWorkbook (workbooks: Workbooks) fname =
-    let mutable workbook = _Workbook.None
+    let mutable workbook = None
     try
         workbook <- Some(workbooks.Open(fname))
     with
         | _ -> Log.error (sprintf "Failed to open Workbook %s." fname)  
     workbook
 
+
 let getWorkbook2 (workbooks: Workbooks) path fname =
     let fqn = path+"\\"+fname
     getWorkbook workbooks fqn
 
+
 let getSheetByName (sheets: Sheets) (name: string) = 
     sheets.[name] :?> Worksheet
+    
      
 let getSheetByIndex (sheets: Sheets) (idx: int) =
     sheets.[idx] :?> Worksheet
 
+
 let getFrameWithStringHeader (sheet: Worksheet) 
-                       (ul: _CellCoord) 
-                       (lr: _CellCoord) = 
+                       (ul: int*int) 
+                       (lr: int*int) = 
     let (ulrow, ulcol) = ul
     let (lrrow,lrcol) = lr
     let data = seq { 
@@ -182,7 +178,7 @@ let getFrameWithStringHeader (sheet: Worksheet)
             for row in [ulrow+1..lrrow] do
                 yield (row-1, label, cellFloat (sheet.Cells.[row,col] :?> Range))
     } 
-    let mutable frame = _FrameIntString.None
+    let mutable frame = None
     try
         frame <- Some (Frame.ofValues data)
     with
@@ -212,6 +208,7 @@ let rec intToColumn i =
         failwith (sprintf "Invalid Excel column index %A" i)
     x
 
+/// returns a System.Array of dimension (ulrow x lrcol) with indices counting from [1;1]
 let getRangeAsArray (sheet: Worksheet) ulrow ulcol lrrow lrcol : Array option =
     let mutable r = None
     try 
@@ -227,7 +224,26 @@ let getRangeAsArray (sheet: Worksheet) ulrow ulcol lrrow lrcol : Array option =
     | Some r -> Some (r.Value() :?> Array)
     | _ -> None
 
-/// catch the exception, when the user opts for letting overwrite the previously opened Workbook
+let getFrameWithHeader (sheet: Worksheet) ulrow ulcol lrrow lrcol : Frame<int,_> option =
+    let r = getRangeAsArray sheet ulrow ulcol lrrow lrcol
+    let mutable data = None
+    match r with
+    | Some r -> data <- Some (seq { for col in [ulcol..lrcol] do
+                                        let label = (r.GetValue [|ulrow;col|])
+                                        for row in [ulrow+1..lrrow] do
+                                            yield (row-1, label, r.GetValue [|row;col|]) } )
+    | _ -> ignore r
+    let mutable frame = None
+    try
+        match data with
+        | Some data -> frame <- Some (Frame.ofValues data)
+        | _ -> ignore data
+    with
+        | _ -> Log.error (sprintf "Failed to read Frame at [%A,%A] [%A,%A]" 
+            ulrow ulcol lrrow lrcol)
+    frame
+
+/// catch the exception, when the user opts for overwriting an already opened Workbook
 let trySave (workbook: Workbook) =
     try 
         workbook.Save()
@@ -245,17 +261,17 @@ type ExcelWorkbook(path: string option, fname: string) =
     let workbooks = 
         match excel with 
         | Some excel -> getWorkbooks excel 
-        | _ -> _Workbooks.None
+        | _ -> None
     let workbook = 
         match workbooks with 
         | Some workbooks -> getWorkbook workbooks fqn
-        | _ -> _Workbook.None
+        | _ -> None
     let sheets = 
         match workbook with 
         | Some workbook -> Some workbook.Sheets 
-        | _ -> _Sheets.None
+        | _ -> None
     /// would want to manage an array of sheet(s) ?
-    let mutable sheet = _Worksheet.None
+    let mutable sheet = None
 
     /// Finally destilled from: 
     /// http://stackoverflow.com/questions/158706/how-to-properly-clean-up-excel-interop-objects
@@ -286,7 +302,7 @@ type ExcelWorkbook(path: string option, fname: string) =
         | Some (sheets) -> sheet <- Some (getSheetByIndex sheets idx)
         | _ -> ignore idx
 
-    member x.getFrameWithStringHeader (ul:_CellCoord) (lr: _CellCoord) = 
+    member x.getFrameWithStringHeader (ul: int*int) (lr: int*int) = 
         match sheet with 
         | Some sheet -> getFrameWithStringHeader sheet ul lr
         | _ -> None
@@ -294,4 +310,9 @@ type ExcelWorkbook(path: string option, fname: string) =
     member x.getRangeAsArray ulrow ulcol lrrow lrcol : Array option =
         match sheet with 
         | Some sheet -> getRangeAsArray sheet ulrow ulcol lrrow lrcol
+        | _ -> None
+
+    member x.getFrameWithHeader ulrow ulcol lrrow lrcol : Frame<int,_> option =
+        match sheet with 
+        | Some sheet -> getFrameWithHeader sheet ulrow ulcol lrrow lrcol
         | _ -> None
